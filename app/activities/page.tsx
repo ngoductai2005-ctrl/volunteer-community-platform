@@ -1,6 +1,6 @@
 'use client';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
@@ -22,12 +22,21 @@ interface Activity {
 }
 
 export default function ActivitiesPage() {
-  // =========================================================
-  // NGƯỜI ĐANG ĐĂNG NHẬP
-  // =========================================================
-  // Tạm thời mô phỏng user đăng nhập.
-  // Sau khi làm Session thật sẽ lấy tên từ session.
-  const currentUserName = 'Ngô Đức Tài';
+  // Thay vì gán cứng 'Ngô Đức Tài', hãy đọc từ localStorage hoặc để mặc định là Guest
+  const [currentUserName, setCurrentUserName] = useState('');
+  const [userRole, setUserRole] = useState<'GUEST' | 'VOLUNTEER' | 'ORGANIZER' | 'ADMIN'>('GUEST');
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem('currentUserName');
+    const savedRole = localStorage.getItem('userRole') as any;
+    
+    if (savedUser) {
+      setCurrentUserName(savedUser);
+      setUserRole(savedRole || 'VOLUNTEER');
+    } else {
+      setUserRole('GUEST');
+    }
+  }, []);
 
   // =========================================================
   // DANH SÁCH HOẠT ĐỘNG
@@ -439,14 +448,13 @@ export default function ActivitiesPage() {
                 >
                   {/* Image */}
 <div className="relative h-48 overflow-hidden bg-slate-200">
-  <Image
+  <img
     src={
       activity.imageUrl ||
       'https://images.unsplash.com/photo-1531206715517-5c0ba140b2b8?auto=format&fit=crop&w=800&q=80'
     }
-    alt={activity.title}
-    fill
-    className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+    alt={activity.title || 'Activity image'}
+    className="w-full h-full object-cover"
   />
 
   <span className="absolute top-3 right-3 z-10 bg-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">

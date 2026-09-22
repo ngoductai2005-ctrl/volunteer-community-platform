@@ -5,40 +5,67 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
-  const [error, setError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [generalError, setGeneralError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
-    setLoading(true);
+    setEmailError(null);
+    setPasswordError(null);
+    setGeneralError(null);
 
     const formData = new FormData(event.currentTarget);
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
-    if (!email.trim()) {
-      setError('Vui lòng nhập email');
-      setLoading(false);
-      return;
-    }
-    if (!email.includes('@')) {
-      setError('Email không hợp lệ');
-      setLoading(false);
-      return;
-    }
-    if (!password) {
-      setError('Vui lòng nhập mật khẩu');
-      setLoading(false);
-      return;
+    let hasError = false;
+
+    // Trường hợp 1: Bấm Đăng nhập khi bỏ trống hoặc sai định dạng email
+    if (!email || !email.trim()) {
+      setEmailError('Vui lòng nhập email.');
+      hasError = true;
+    } else if (!email.includes('@') || !email.includes('.')) {
+      // Trường hợp 2: Nhập email sai (ví dụ: abc)
+      setEmailError('Email không đúng định dạng.');
+      hasError = true;
     }
 
+    // Kiểm tra mật khẩu
+    if (!password) {
+      setPasswordError('Vui lòng nhập mật khẩu.');
+      hasError = true;
+    } else if (password.length < 6) {
+      // Trường hợp 3: Mật khẩu dưới 6 ký tự (ví dụ: 123)
+      setPasswordError('Mật khẩu phải có ít nhất 6 ký tự.');
+      hasError = true;
+    }
+
+    if (hasError) return;
+
+    setLoading(true);
+
     try {
-      // Giả lập đăng nhập thành công
+      const res = await fetch(`/api/user?email=${email}`);
+      const data = await res.json();
+
+      if (!res.ok || !data) {
+        setGeneralError('Email hoặc mật khẩu không đúng');
+        setLoading(false);
+        return;
+      }
+
+      localStorage.setItem('userEmail', data.email);
+      localStorage.setItem('currentUserName', data.name || 'Thành viên');
+      localStorage.setItem('userRole', data.role || 'VOLUNTEER');
+
       router.push('/profile');
-    } catch (_) {
-      setError('Email hoặc mật khẩu không đúng');
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+      setGeneralError('Đã xảy ra lỗi kết nối, vui lòng thử lại');
       setLoading(false);
     }
   }
@@ -65,36 +92,43 @@ export default function LoginPage() {
           <p className="text-sm text-slate-500 mt-1">Đăng nhập để tiếp tục hành trình lan tỏa yêu thương</p>
         </div>
         
-        {error && (
-          <div className="bg-red-50 border border-red-100 text-red-600 p-3.5 rounded-xl mb-6 text-sm text-center font-medium animate-shake">
-            {error}
+        {generalError && (
+          <div className="bg-red-50 border border-red-100 text-red-600 p-3.5 rounded-xl mb-6 text-sm text-center font-medium">
+            {generalError}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-5" noValidate>
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Địa chỉ Email</label>
             <input 
               name="email" 
-              type="email" 
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition text-sm" 
+              type="text" 
+              className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition text-sm text-slate-900 font-medium ${
+                emailError ? 'border-red-500 bg-red-50/50' : 'border-slate-200'
+              }`} 
               placeholder="name@example.com" 
             />
+            {emailError && <p className="text-red-500 text-xs mt-1.5 font-medium">{emailError}</p>}
           </div>
+
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Mật khẩu</label>
             <input 
               name="password" 
               type="password" 
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition text-sm" 
+              className={`w-full px-4 py-3 bg-slate-50 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition text-sm text-slate-900 font-medium ${
+                passwordError ? 'border-red-500 bg-red-50/50' : 'border-slate-200'
+              }`} 
               placeholder="••••••••" 
             />
+            {passwordError && <p className="text-red-500 text-xs mt-1.5 font-medium">{passwordError}</p>}
           </div>
 
           <button 
             type="submit" 
             disabled={loading} 
-            className="w-full bg-emerald-600 text-white py-3.5 rounded-xl font-bold hover:bg-emerald-700 shadow-lg shadow-emerald-600/30 transition transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70"
+            className="w-full bg-emerald-600 text-white py-3.5 rounded-xl font-bold hover:bg-emerald-700 shadow-lg shadow-emerald-600/30 transition transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 cursor-pointer"
           >
             {loading ? 'Đang xử lý...' : 'Đăng nhập ngay'}
           </button>
